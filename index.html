@@ -39,22 +39,54 @@
   input[type=search] { flex: 1; min-width: 180px; }
   input[type=search]::placeholder { color: rgba(255,255,255,0.4); }
   select option { background: #1a2340; }
-  select[multiple] {
-    height: 120px;
-    min-width: 200px;
-    padding: 0.25rem;
+  .multi-select { position: relative; }
+  .multi-select-btn {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid rgba(255,255,255,0.2);
     border-radius: 6px;
-    resize: none;
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    font: inherit;
+    font-size: 0.875rem;
+    cursor: pointer;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .multi-select-btn::after { content: '▾'; font-size: 0.7rem; opacity: 0.7; }
+  .multi-select-btn.has-selection { background: rgba(100,140,255,0.25); border-color: rgba(100,140,255,0.5); }
+  .multi-select-panel {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    background: #1a2340;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    padding: 0.5rem;
+    min-width: 220px;
+    max-height: 280px;
+    overflow-y: auto;
+    z-index: 100;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
     scrollbar-width: thin;
-    scrollbar-color: rgba(255,255,255,0.3) transparent;
+    scrollbar-color: rgba(255,255,255,0.2) transparent;
   }
-  select[multiple] option {
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
+  .multi-select-panel.open { display: block; }
+  .multi-select-panel label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 0.5rem;
+    border-radius: 5px;
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.85);
+    cursor: pointer;
+    white-space: nowrap;
   }
-  select[multiple] option:checked {
-    background: rgba(100,140,255,0.4);
-  }
+  .multi-select-panel label:hover { background: rgba(255,255,255,0.08); }
+  .multi-select-panel label input[type=checkbox] { accent-color: #6488ff; width: 14px; height: 14px; cursor: pointer; }
   #count { font-size: 0.8rem; color: rgba(255,255,255,0.5); margin-left: auto; }
 
   #loading {
@@ -166,7 +198,10 @@
   <h1>Supervisor Finder</h1>
   <div id="controls">
     <input type="search" id="search" placeholder="Search name or topic…">
-    <select id="subjectSel" multiple></select>
+    <div class="multi-select" id="subjectDropdown">
+      <button class="multi-select-btn" id="subjectBtn">All subjects</button>
+      <div class="multi-select-panel" id="subjectPanel"></div>
+    </div>
     <span id="count"></span>
   </div>
 </header>
@@ -358,8 +393,22 @@ function loadCSV(text) {
   const rows = parseCSV(text);
   DATA = buildData(rows);
 
-  const subSel = document.getElementById('subjectSel');
-  DATA.subjects.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; subSel.appendChild(o); });
+  const panel = document.getElementById('subjectPanel');
+  DATA.subjects.forEach(s => {
+    const lbl = document.createElement('label');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.value = s;
+    cb.addEventListener('change', () => {
+      subjectF = Array.from(panel.querySelectorAll('input:checked')).map(i => i.value);
+      const btn = document.getElementById('subjectBtn');
+      btn.textContent = subjectF.length === 0 ? 'All subjects' : subjectF.length === 1 ? subjectF[0] : subjectF.length + ' subjects selected';
+      btn.classList.toggle('has-selection', subjectF.length > 0);
+      render();
+    });
+    lbl.appendChild(cb);
+    lbl.appendChild(document.createTextNode(s));
+    panel.appendChild(lbl);
+  });
 
   document.getElementById('loading').style.display = 'none';
   document.getElementById('controls').style.display = 'flex';
@@ -372,9 +421,14 @@ fetch('data.csv')
   .catch(() => { document.getElementById('loading').textContent = 'Could not load CSV — make sure it is in the same folder as this HTML file.'; });
 
 document.getElementById('search').addEventListener('input', e => { searchQ = e.target.value.trim(); render(); });
-document.getElementById('subjectSel').addEventListener('change', e => {
-  subjectF = Array.from(e.target.selectedOptions).map(o => o.value);
-  render();
+
+document.getElementById('subjectBtn').addEventListener('click', () => {
+  document.getElementById('subjectPanel').classList.toggle('open');
+});
+document.addEventListener('click', e => {
+  if (!document.getElementById('subjectDropdown').contains(e.target)) {
+    document.getElementById('subjectPanel').classList.remove('open');
+  }
 });
 </script>
 </body>
