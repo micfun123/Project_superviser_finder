@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -c '`' /home/michael/Projects/easy_supervisers/data.csv)",
+      "Bash(grep -cP '`' /home/michael/Projects/easy_supervisers/data.csv)"
+    ]
+  }
+}

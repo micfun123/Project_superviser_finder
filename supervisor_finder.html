@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Supervisor Finder</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #f5f4f1; color: #1a1a2e; }
+
+  header {
+    background: #1a2340;
+    color: #fff;
+    padding: 1.5rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+  header h1 { font-size: 1.2rem; font-weight: 600; white-space: nowrap; }
+
+  #controls {
+    display: none;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    align-items: center;
+    flex: 1;
+  }
+  input[type=search], select {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 6px;
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    font: inherit;
+    font-size: 0.875rem;
+    outline: none;
+  }
+  input[type=search] { flex: 1; min-width: 180px; }
+  input[type=search]::placeholder { color: rgba(255,255,255,0.4); }
+  select option { background: #1a2340; }
+  #count { font-size: 0.8rem; color: rgba(255,255,255,0.5); margin-left: auto; }
+
+  #loading {
+    text-align: center;
+    padding: 4rem;
+    color: #aaa;
+  }
+
+  main { max-width: 1200px; margin: 0 auto; padding: 1.5rem 1rem; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+  }
+
+  .card {
+    background: #fff;
+    border: 1px solid #e0ddd6;
+    border-radius: 10px;
+    padding: 1.2rem;
+    cursor: pointer;
+    transition: box-shadow 0.15s, transform 0.15s;
+  }
+  .card:hover { box-shadow: 0 6px 24px rgba(26,35,64,0.12); transform: translateY(-2px); }
+  .card h3 { font-size: 1rem; margin-bottom: 0.5rem; color: #1a2340; }
+
+  .specs { display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 0.6rem; }
+  .spec {
+    font-size: 0.68rem; padding: 2px 7px; border-radius: 4px;
+    background: #fef3dc; color: #7a4d00; border: 1px solid #f0d68a;
+  }
+
+  .topics { display: flex; flex-wrap: wrap; gap: 3px; }
+  .chip {
+    font-size: 0.7rem; padding: 2px 8px; border-radius: 20px;
+    background: #eef; color: #449; border: 1px solid #dde;
+  }
+  .chip.more { background: #f0f0f0; color: #888; border-color: #e0e0e0; }
+
+  .card-footer {
+    margin-top: 0.75rem;
+    padding-top: 0.6rem;
+    border-top: 1px solid #eee;
+    font-size: 0.75rem;
+    color: #999;
+  }
+
+  .overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(10,15,35,0.5);
+    z-index: 999;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  .overlay.open { display: flex; }
+  .modal {
+    background: #fff;
+    border-radius: 14px;
+    width: 100%;
+    max-width: 640px;
+    max-height: 88vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+  }
+  .modal-head {
+    background: #1a2340;
+    color: #fff;
+    padding: 1.5rem;
+    border-radius: 14px 14px 0 0;
+    position: sticky; top: 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .modal-head h2 { font-size: 1.25rem; }
+  .modal-close {
+    background: rgba(255,255,255,0.1); border: none; color: #fff;
+    width: 30px; height: 30px; border-radius: 6px; font-size: 1rem;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .modal-close:hover { background: rgba(255,255,255,0.2); }
+  .modal-body { padding: 1.5rem; }
+  .modal-section { margin-bottom: 1.25rem; }
+  .modal-section h4 {
+    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em;
+    color: #999; margin-bottom: 0.5rem;
+  }
+  .note-box {
+    font-size: 0.875rem; line-height: 1.6; color: #444;
+    background: #fef9ee; border-left: 3px solid #e8a020;
+    padding: 0.75rem 1rem; border-radius: 0 8px 8px 0;
+  }
+  .group { margin-bottom: 0.75rem; }
+  .group-label { font-size: 0.72rem; color: #888; font-weight: 600; margin-bottom: 0.3rem; }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px; }
+
+  mark { background: #fff3b0; border-radius: 2px; }
+  #no-results { text-align: center; padding: 4rem; color: #aaa; display: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Supervisor Finder</h1>
+  <div id="controls">
+    <input type="search" id="search" placeholder="Search name or topic…">
+    <select id="subjectSel"><option value="">All subjects</option></select>
+    <select id="specSel"><option value="">All MSc courses</option></select>
+    <span id="count"></span>
+  </div>
+</header>
+
+<div id="loading">Loading…</div>
+
+<main>
+  <div id="no-results">No supervisors match your search.</div>
+  <div class="grid" id="grid"></div>
+</main>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="mName"></h2>
+      <button class="modal-close" id="mClose">&#x2715;</button>
+    </div>
+    <div class="modal-body" id="mBody"></div>
+  </div>
+</div>
+
+<script>
+// ── CSV parser (handles quoted fields with embedded newlines/commas) ──
+function parseCSV(text) {
+  const rows = [];
+  let row = [], field = '', inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"' && text[i+1] === '"') { field += '"'; i++; }
+      else if (c === '"') { inQ = false; }
+      else { field += c; }
+    } else {
+      if (c === '"') { inQ = true; }
+      else if (c === ',') { row.push(field); field = ''; }
+      else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+      else if (c !== '\r') { field += c; }
+    }
+  }
+  if (field || row.length) { row.push(field); rows.push(row); }
+  return rows;
+}
+
+// ── Build structured data from rows ──
+function buildData(rows) {
+  // Row 0: supervisor names start at col 2
+  const nameRow = rows[0];
+  const supervisors = [];
+  for (let col = 2; col < nameRow.length; col++) {
+    const name = nameRow[col].replace(/\s+/g, ' ').trim();
+    if (!name) continue;
+    supervisors.push({ name, col, specs: [], additional: '', topics: [] });
+  }
+
+  // Row 2: MSc specialisation codes
+  const ABBR = { CNAM:'Computer Networks & Admin Mgmt', CSFIT:'Cyber Security & Forensic IT',
+                 DA:'Data Analytics', IS:'Information Systems', CS:'Computer Science', AIML:'AI & Machine Learning' };
+  const specRow = rows[2] || [];
+  supervisors.forEach(sup => {
+    const raw = (specRow[sup.col] || '').replace(/\s+/g, ' ').trim();
+    sup.specs = raw.split(/[\s,]+/).filter(Boolean).map(s => ABBR[s] || s);
+  });
+
+  // Find "Any additional topics" row
+  for (let i = rows.length - 1; i > 0; i--) {
+    if ((rows[i][0] || '').toLowerCase().includes('additional')) {
+      supervisors.forEach(sup => {
+        sup.additional = (rows[i][sup.col] || '').replace(/\s+/g, ' ').trim();
+      });
+      break;
+    }
+  }
+
+  // Find end of topic data (row where col 0 = "Count")
+  let endRow = rows.length;
+  for (let i = 0; i < rows.length; i++) {
+    if ((rows[i][0] || '').trim().toLowerCase() === 'count') { endRow = i; break; }
+  }
+
+  // Rows 5..endRow: topic data
+  let currentSubject = '';
+  for (let i = 5; i < endRow; i++) {
+    const row = rows[i];
+    const subj = (row[0] || '').trim();
+    const topic = (row[1] || '').trim();
+    if (subj) currentSubject = subj;
+    if (!topic) continue;
+    supervisors.forEach(sup => {
+      const val = (row[sup.col] || '').trim().toLowerCase();
+      if (val === 'y' || val === 'd') sup.topics.push({ subject: currentSubject, topic });
+    });
+  }
+
+  const subjects = [...new Set(supervisors.flatMap(s => s.topics.map(t => t.subject)))].sort();
+  const allSpecs = [...new Set(supervisors.flatMap(s => s.specs))].sort();
+  return { supervisors, subjects, allSpecs };
+}
+
+// ── App state ──
+let DATA = null, searchQ = '', subjectF = '', specF = '';
+
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function hlText(s, q) {
+  if (!q) return esc(s);
+  return esc(s).replace(new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + ')', 'gi'), '<mark>$1</mark>');
+}
+
+function filtered() {
+  if (!DATA) return [];
+  let list = DATA.supervisors;
+  if (subjectF) list = list.filter(s => s.topics.some(t => t.subject === subjectF));
+  if (specF)    list = list.filter(s => s.specs.includes(specF));
+  if (searchQ) {
+    const q = searchQ.toLowerCase();
+    list = list.filter(s =>
+      s.name.toLowerCase().includes(q) ||
+      s.topics.some(t => t.topic.toLowerCase().includes(q) || t.subject.toLowerCase().includes(q)) ||
+      s.additional.toLowerCase().includes(q)
+    );
+  }
+  return list;
+}
+
+function render() {
+  const list = filtered();
+  document.getElementById('count').textContent = list.length + ' supervisor' + (list.length !== 1 ? 's' : '');
+  const grid = document.getElementById('grid');
+  const noRes = document.getElementById('no-results');
+  if (!list.length) { grid.innerHTML = ''; noRes.style.display = 'block'; return; }
+  noRes.style.display = 'none';
+
+  grid.innerHTML = list.map(sup => {
+    let display = sup.topics;
+    if (searchQ) {
+      const q = searchQ.toLowerCase();
+      const m = sup.topics.filter(t => t.topic.toLowerCase().includes(q) || t.subject.toLowerCase().includes(q));
+      if (m.length) display = m;
+    }
+    const shown = display.slice(0, 5);
+    const extra = display.length - shown.length;
+    return `<div class="card" data-name="${esc(sup.name)}">
+      <h3>${hlText(sup.name, searchQ)}</h3>
+      ${sup.specs.length ? `<div class="specs">${sup.specs.map(s=>`<span class="spec">${esc(s)}</span>`).join('')}</div>` : ''}
+      <div class="topics">
+        ${shown.map(t=>`<span class="chip">${hlText(t.topic, searchQ)}</span>`).join('')}
+        ${extra > 0 ? `<span class="chip more">+${extra} more</span>` : ''}
+        ${!sup.topics.length ? '<span style="color:#bbb;font-size:.75rem">No topics listed</span>' : ''}
+      </div>
+      <div class="card-footer">${sup.topics.length} topic${sup.topics.length !== 1 ? 's' : ''}</div>
+    </div>`;
+  }).join('');
+
+  grid.querySelectorAll('.card').forEach(c =>
+    c.addEventListener('click', () => openModal(c.dataset.name))
+  );
+}
+
+function openModal(name) {
+  const sup = DATA.supervisors.find(s => s.name === name);
+  if (!sup) return;
+  document.getElementById('mName').textContent = sup.name;
+
+  const grouped = {};
+  sup.topics.forEach(t => (grouped[t.subject] = grouped[t.subject] || []).push(t.topic));
+
+  document.getElementById('mBody').innerHTML =
+    (sup.specs.length ? `<div class="modal-section"><h4>MSc courses</h4><div class="chips">${sup.specs.map(s=>`<span class="chip">${esc(s)}</span>`).join('')}</div></div>` : '') +
+    (sup.additional ? `<div class="modal-section"><h4>Additional notes</h4><div class="note-box">${esc(sup.additional)}</div></div>` : '') +
+    (sup.topics.length
+      ? `<div class="modal-section"><h4>${sup.topics.length} research topics</h4>` +
+        Object.entries(grouped).sort(([a],[b])=>a.localeCompare(b)).map(([subj,ts])=>
+          `<div class="group"><div class="group-label">${esc(subj)}</div><div class="chips">${ts.map(t=>`<span class="chip">${hlText(t, searchQ)}</span>`).join('')}</div></div>`
+        ).join('') + `</div>`
+      : `<div class="modal-section"><p style="color:#aaa;font-size:.875rem">No topics listed.</p></div>`);
+
+  document.getElementById('overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  document.getElementById('overlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.getElementById('mClose').addEventListener('click', closeModal);
+document.getElementById('overlay').addEventListener('click', e => { if (e.target.id === 'overlay') closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+// ── Load CSV ──
+function loadCSV(text) {
+  const rows = parseCSV(text);
+  DATA = buildData(rows);
+
+  const subSel = document.getElementById('subjectSel');
+  DATA.subjects.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; subSel.appendChild(o); });
+
+  const spSel = document.getElementById('specSel');
+  DATA.allSpecs.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; spSel.appendChild(o); });
+
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('controls').style.display = 'flex';
+  render();
+}
+
+fetch('data.csv')
+  .then(r => r.arrayBuffer())
+  .then(buf => loadCSV(new TextDecoder('latin1').decode(buf)))
+  .catch(() => { document.getElementById('loading').textContent = 'Could not load CSV — make sure it is in the same folder as this HTML file.'; });
+
+document.getElementById('search').addEventListener('input', e => { searchQ = e.target.value.trim(); render(); });
+document.getElementById('subjectSel').addEventListener('change', e => { subjectF = e.target.value; render(); });
+document.getElementById('specSel').addEventListener('change', e => { specF = e.target.value; render(); });
+</script>
+</body>
+</html>
