@@ -39,6 +39,22 @@
   input[type=search] { flex: 1; min-width: 180px; }
   input[type=search]::placeholder { color: rgba(255,255,255,0.4); }
   select option { background: #1a2340; }
+  select[multiple] {
+    height: 120px;
+    min-width: 200px;
+    padding: 0.25rem;
+    border-radius: 6px;
+    resize: none;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.3) transparent;
+  }
+  select[multiple] option {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+  }
+  select[multiple] option:checked {
+    background: rgba(100,140,255,0.4);
+  }
   #count { font-size: 0.8rem; color: rgba(255,255,255,0.5); margin-left: auto; }
 
   #loading {
@@ -150,8 +166,7 @@
   <h1>Supervisor Finder</h1>
   <div id="controls">
     <input type="search" id="search" placeholder="Search name or topic…">
-    <select id="subjectSel"><option value="">All subjects</option></select>
-    <select id="specSel"><option value="">All MSc courses</option></select>
+    <select id="subjectSel" multiple></select>
     <span id="count"></span>
   </div>
 </header>
@@ -251,7 +266,7 @@ function buildData(rows) {
 }
 
 // ── App state ──
-let DATA = null, searchQ = '', subjectF = '', specF = '';
+let DATA = null, searchQ = '', subjectF = [];
 
 const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 function hlText(s, q) {
@@ -262,8 +277,7 @@ function hlText(s, q) {
 function filtered() {
   if (!DATA) return [];
   let list = DATA.supervisors;
-  if (subjectF) list = list.filter(s => s.topics.some(t => t.subject === subjectF));
-  if (specF)    list = list.filter(s => s.specs.includes(specF));
+  if (subjectF.length) list = list.filter(s => s.topics.some(t => subjectF.includes(t.subject)));
   if (searchQ) {
     const q = searchQ.toLowerCase();
     list = list.filter(s =>
@@ -347,9 +361,6 @@ function loadCSV(text) {
   const subSel = document.getElementById('subjectSel');
   DATA.subjects.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; subSel.appendChild(o); });
 
-  const spSel = document.getElementById('specSel');
-  DATA.allSpecs.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; spSel.appendChild(o); });
-
   document.getElementById('loading').style.display = 'none';
   document.getElementById('controls').style.display = 'flex';
   render();
@@ -361,8 +372,10 @@ fetch('data.csv')
   .catch(() => { document.getElementById('loading').textContent = 'Could not load CSV — make sure it is in the same folder as this HTML file.'; });
 
 document.getElementById('search').addEventListener('input', e => { searchQ = e.target.value.trim(); render(); });
-document.getElementById('subjectSel').addEventListener('change', e => { subjectF = e.target.value; render(); });
-document.getElementById('specSel').addEventListener('change', e => { specF = e.target.value; render(); });
+document.getElementById('subjectSel').addEventListener('change', e => {
+  subjectF = Array.from(e.target.selectedOptions).map(o => o.value);
+  render();
+});
 </script>
 </body>
 </html>
