@@ -133,6 +133,40 @@
     border-top: 1px solid #eee;
     font-size: 0.75rem;
     color: #999;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .card-room {
+    font-size: 0.72rem;
+    background: #f0f4ff;
+    color: #446;
+    border: 1px solid #dde;
+    border-radius: 4px;
+    padding: 1px 6px;
+    white-space: nowrap;
+  }
+  .modal-contact {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+  }
+  .modal-contact a {
+    font-size: 0.875rem;
+    color: #1a2340;
+    text-decoration: none;
+    border-bottom: 1px solid #aab;
+  }
+  .modal-contact a:hover { border-color: #1a2340; }
+  .modal-room-badge {
+    font-size: 0.8rem;
+    background: #f0f4ff;
+    color: #446;
+    border: 1px solid #dde;
+    border-radius: 5px;
+    padding: 2px 8px;
   }
 
   .overlay {
@@ -256,8 +290,23 @@ function parseCSV(text) {
   return rows;
 }
 
+// ── Build staff lookup from staff.csv ──
+function buildStaffLookup(text) {
+  const rows = parseCSV(text);
+  const lookup = {};
+  for (let i = 1; i < rows.length; i++) {
+    const name = (rows[i][0] || '').trim();
+    if (!name) continue;
+    lookup[name.toLowerCase()] = {
+      email: (rows[i][1] || '').trim(),
+      room:  (rows[i][2] || '').trim()
+    };
+  }
+  return lookup;
+}
+
 // ── Build structured data from rows ──
-function buildData(rows) {
+function buildData(rows, staffLookup) {
   // Row 0: supervisor names start at col 2
   const nameRow = rows[0];
   const supervisors = [];
@@ -303,6 +352,15 @@ function buildData(rows) {
     supervisors.forEach(sup => {
       const val = (row[sup.col] || '').trim().toLowerCase();
       if (val === 'y' || val === 'd') sup.topics.push({ subject: currentSubject, topic });
+    });
+  }
+
+  // Enrich with email/room from staff.csv
+  if (staffLookup) {
+    supervisors.forEach(sup => {
+      const info = staffLookup[sup.name.toLowerCase()] || {};
+      sup.email = info.email || '';
+      sup.room  = info.room  || '';
     });
   }
 
@@ -360,7 +418,10 @@ function render() {
         ${extra > 0 ? `<span class="chip more">+${extra} more</span>` : ''}
         ${!sup.topics.length ? '<span style="color:#bbb;font-size:.75rem">No topics listed</span>' : ''}
       </div>
-      <div class="card-footer">${sup.topics.length} topic${sup.topics.length !== 1 ? 's' : ''}</div>
+      <div class="card-footer">
+        <span>${sup.topics.length} topic${sup.topics.length !== 1 ? 's' : ''}</span>
+        ${sup.room ? `<span class="card-room">${esc(sup.room)}</span>` : ''}
+      </div>
     </div>`;
   }).join('');
 
@@ -377,7 +438,10 @@ function openModal(name) {
   const grouped = {};
   sup.topics.forEach(t => (grouped[t.subject] = grouped[t.subject] || []).push(t.topic));
 
+  const contactHtml = (sup.email || sup.room) ? `<div class="modal-section"><h4>Contact</h4><div class="modal-contact">${sup.email ? `<a href="mailto:${esc(sup.email)}">${esc(sup.email)}</a>` : ''}${sup.room ? `<span class="modal-room-badge">${esc(sup.room)}</span>` : ''}</div></div>` : '';
+
   document.getElementById('mBody').innerHTML =
+    contactHtml +
     (sup.specs.length ? `<div class="modal-section"><h4>MSc courses</h4><div class="chips">${sup.specs.map(s=>`<span class="chip">${esc(s)}</span>`).join('')}</div></div>` : '') +
     (sup.additional ? `<div class="modal-section"><h4>Additional notes</h4><div class="note-box">${esc(sup.additional)}</div></div>` : '') +
     (sup.topics.length
@@ -400,9 +464,9 @@ document.getElementById('overlay').addEventListener('click', e => { if (e.target
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
 // ── Load CSV ──
-function loadCSV(text) {
+function loadCSV(text, staffLookup) {
   const rows = parseCSV(text);
-  DATA = buildData(rows);
+  DATA = buildData(rows, staffLookup);
 
   const panel = document.getElementById('subjectPanel');
   DATA.subjects.forEach(s => {
@@ -426,9 +490,12 @@ function loadCSV(text) {
   render();
 }
 
-fetch('data.csv')
-  .then(r => r.arrayBuffer())
-  .then(buf => loadCSV(new TextDecoder('latin1').decode(buf)))
+Promise.all([fetch('data.csv'), fetch('staff.csv')])
+  .then(([r1, r2]) => Promise.all([r1.arrayBuffer(), r2.arrayBuffer()]))
+  .then(([buf1, buf2]) => {
+    const staffLookup = buildStaffLookup(new TextDecoder('latin1').decode(buf2));
+    loadCSV(new TextDecoder('latin1').decode(buf1), staffLookup);
+  })
   .catch(() => { document.getElementById('loading').textContent = 'Could not load CSV — make sure it is in the same folder as this HTML file.'; });
 
 document.getElementById('search').addEventListener('input', e => { searchQ = e.target.value.trim(); render(); });
