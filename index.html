@@ -4,236 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Supervisor Finder</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: system-ui, sans-serif; background: #f5f4f1; color: #1a1a2e; }
-
-  header {
-    background: #1a2340;
-    color: #fff;
-    padding: 1.5rem 2rem;
-    display: flex;
-    align-items: center;
-    gap: 2rem;
-    flex-wrap: wrap;
-  }
-  header h1 { font-size: 1.2rem; font-weight: 600; white-space: nowrap; }
-
-  #controls {
-    display: none;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-    align-items: center;
-    flex: 1;
-  }
-  input[type=search], select {
-    padding: 0.5rem 0.75rem;
-    border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 6px;
-    background: rgba(255,255,255,0.1);
-    color: #fff;
-    font: inherit;
-    font-size: 0.875rem;
-    outline: none;
-  }
-  input[type=search] { flex: 1; min-width: 180px; }
-  input[type=search]::placeholder { color: rgba(255,255,255,0.4); }
-  select option { background: #1a2340; }
-  .multi-select { position: relative; }
-  .multi-select-btn {
-    padding: 0.5rem 0.75rem;
-    border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 6px;
-    background: rgba(255,255,255,0.1);
-    color: #fff;
-    font: inherit;
-    font-size: 0.875rem;
-    cursor: pointer;
-    white-space: nowrap;
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-  }
-  .multi-select-btn::after { content: '▾'; font-size: 0.7rem; opacity: 0.7; }
-  .multi-select-btn.has-selection { background: rgba(100,140,255,0.25); border-color: rgba(100,140,255,0.5); }
-  .multi-select-panel {
-    display: none;
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0;
-    background: #1a2340;
-    border: 1px solid rgba(255,255,255,0.15);
-    border-radius: 8px;
-    padding: 0.5rem;
-    min-width: 220px;
-    max-height: 280px;
-    overflow-y: auto;
-    z-index: 100;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255,255,255,0.2) transparent;
-  }
-  .multi-select-panel.open { display: block; }
-  .multi-select-panel label {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.35rem 0.5rem;
-    border-radius: 5px;
-    font-size: 0.85rem;
-    color: rgba(255,255,255,0.85);
-    cursor: pointer;
-    white-space: nowrap;
-  }
-  .multi-select-panel label:hover { background: rgba(255,255,255,0.08); }
-  .multi-select-panel label input[type=checkbox] { accent-color: #6488ff; width: 14px; height: 14px; cursor: pointer; }
-  #count { font-size: 0.8rem; color: rgba(255,255,255,0.5); margin-left: auto; }
-
-  #loading {
-    text-align: center;
-    padding: 4rem;
-    color: #aaa;
-  }
-
-  main { max-width: 1200px; margin: 0 auto; padding: 1.5rem 1rem; }
-
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 1rem;
-  }
-
-  .card {
-    background: #fff;
-    border: 1px solid #e0ddd6;
-    border-radius: 10px;
-    padding: 1.2rem;
-    cursor: pointer;
-    transition: box-shadow 0.15s, transform 0.15s;
-  }
-  .card:hover { box-shadow: 0 6px 24px rgba(26,35,64,0.12); transform: translateY(-2px); }
-  .card h3 { font-size: 1rem; margin-bottom: 0.5rem; color: #1a2340; }
-
-  .specs { display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 0.6rem; }
-  .spec {
-    font-size: 0.68rem; padding: 2px 7px; border-radius: 4px;
-    background: #fef3dc; color: #7a4d00; border: 1px solid #f0d68a;
-  }
-
-  .topics { display: flex; flex-wrap: wrap; gap: 3px; }
-  .chip {
-    font-size: 0.7rem; padding: 2px 8px; border-radius: 20px;
-    background: #eef; color: #449; border: 1px solid #dde;
-  }
-  .chip.more { background: #f0f0f0; color: #888; border-color: #e0e0e0; }
-
-  .card-footer {
-    margin-top: 0.75rem;
-    padding-top: 0.6rem;
-    border-top: 1px solid #eee;
-    font-size: 0.75rem;
-    color: #999;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  .card-room {
-    font-size: 0.72rem;
-    background: #f0f4ff;
-    color: #446;
-    border: 1px solid #dde;
-    border-radius: 4px;
-    padding: 1px 6px;
-    white-space: nowrap;
-  }
-  .modal-contact {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    align-items: center;
-  }
-  .modal-contact a {
-    font-size: 0.875rem;
-    color: #1a2340;
-    text-decoration: none;
-    border-bottom: 1px solid #aab;
-  }
-  .modal-contact a:hover { border-color: #1a2340; }
-  .modal-room-badge {
-    font-size: 0.8rem;
-    background: #f0f4ff;
-    color: #446;
-    border: 1px solid #dde;
-    border-radius: 5px;
-    padding: 2px 8px;
-  }
-
-  .overlay {
-    display: none;
-    position: fixed; inset: 0;
-    background: rgba(10,15,35,0.5);
-    z-index: 999;
-    align-items: center;
-    justify-content: center;
-    padding: 1rem;
-  }
-  .overlay.open { display: flex; }
-  .modal {
-    background: #fff;
-    border-radius: 14px;
-    width: 100%;
-    max-width: 640px;
-    max-height: 88vh;
-    overflow-y: auto;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
-  }
-  .modal-head {
-    background: #1a2340;
-    color: #fff;
-    padding: 1.5rem;
-    border-radius: 14px 14px 0 0;
-    position: sticky; top: 0;
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 1rem;
-  }
-  .modal-head h2 { font-size: 1.25rem; }
-  .modal-close {
-    background: rgba(255,255,255,0.1); border: none; color: #fff;
-    width: 30px; height: 30px; border-radius: 6px; font-size: 1rem;
-    cursor: pointer; display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-  }
-  .modal-close:hover { background: rgba(255,255,255,0.2); }
-  .modal-body { padding: 1.5rem; }
-  .modal-section { margin-bottom: 1.25rem; }
-  .modal-section h4 {
-    font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em;
-    color: #999; margin-bottom: 0.5rem;
-  }
-  .note-box {
-    font-size: 0.875rem; line-height: 1.6; color: #444;
-    background: #fef9ee; border-left: 3px solid #e8a020;
-    padding: 0.75rem 1rem; border-radius: 0 8px 8px 0;
-  }
-  .group { margin-bottom: 0.75rem; }
-  .group-label { font-size: 0.72rem; color: #888; font-weight: 600; margin-bottom: 0.3rem; }
-  .chips { display: flex; flex-wrap: wrap; gap: 4px; }
-
-  mark { background: #fff3b0; border-radius: 2px; }
-  #no-results { text-align: center; padding: 4rem; color: #aaa; display: none; }
-
-  footer {
-    text-align: center;
-    padding: 2rem;
-    font-size: 0.75rem;
-    color: #aaa;
-  }
-  footer a { color: #aaa; text-decoration: underline; }
-  footer a:hover { color: #555; }
-</style>
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
@@ -269,7 +40,7 @@
 </div>
 
 <script>
-// ── CSV parser (handles quoted fields with embedded newlines/commas) ──
+// CSV parser
 function parseCSV(text) {
   const rows = [];
   let row = [], field = '', inQ = false;
@@ -290,7 +61,7 @@ function parseCSV(text) {
   return rows;
 }
 
-// ── Build staff lookup from staff.csv ──
+// Build staff lookup from staff.csv
 function buildStaffLookup(text) {
   const rows = parseCSV(text);
   const lookup = {};
@@ -305,7 +76,7 @@ function buildStaffLookup(text) {
   return lookup;
 }
 
-// ── Build structured data from rows ──
+
 function buildData(rows, staffLookup) {
   // Row 0: supervisor names start at col 2
   const nameRow = rows[0];
@@ -335,13 +106,13 @@ function buildData(rows, staffLookup) {
     }
   }
 
-  // Find end of topic data (row where col 0 = "Count")
+  
   let endRow = rows.length;
   for (let i = 0; i < rows.length; i++) {
     if ((rows[i][0] || '').trim().toLowerCase() === 'count') { endRow = i; break; }
   }
 
-  // Rows 5..endRow: topic data
+  
   let currentSubject = '';
   for (let i = 5; i < endRow; i++) {
     const row = rows[i];
@@ -355,7 +126,7 @@ function buildData(rows, staffLookup) {
     });
   }
 
-  // Enrich with email/room from staff.csv
+  
   if (staffLookup) {
     supervisors.forEach(sup => {
       const info = staffLookup[sup.name.toLowerCase()] || {};
@@ -369,7 +140,7 @@ function buildData(rows, staffLookup) {
   return { supervisors, subjects, allSpecs };
 }
 
-// ── App state ──
+
 let DATA = null, searchQ = '', subjectF = [];
 
 const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -463,7 +234,7 @@ document.getElementById('mClose').addEventListener('click', closeModal);
 document.getElementById('overlay').addEventListener('click', e => { if (e.target.id === 'overlay') closeModal(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
-// ── Load CSV ──
+//  Load CSV 
 function loadCSV(text, staffLookup) {
   const rows = parseCSV(text);
   DATA = buildData(rows, staffLookup);
