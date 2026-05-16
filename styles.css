@@ -218,6 +218,25 @@ main { max-width: 1200px; margin: 0 auto; padding: 1.5rem 1rem; }
 mark { background: #fff3b0; border-radius: 2px; }
 #no-results { text-align: center; padding: 4rem; color: #aaa; display: none; }
 
+.project-idea {
+  border: 1px solid #e4e8f0;
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 0.6rem;
+  background: #fafbff;
+}
+.project-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1a2340;
+  margin-bottom: 0.35rem;
+}
+.project-meta { display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 0.4rem; }
+.chip.project-type { background: #f0fff4; color: #2d6a4f; border-color: #b7e4c7; }
+.chip.project-subject { background: #fef3dc; color: #7a4d00; border-color: #f0d68a; }
+.project-desc { font-size: 0.8rem; color: #555; line-height: 1.55; }
+.card-ideas { color: #6488cc; font-variant-numeric: tabular-nums; }
+
 footer {
   text-align: center;
   padding: 2rem;
